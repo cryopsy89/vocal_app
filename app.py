@@ -140,6 +140,18 @@ if st.button("Оценить", type="primary", disabled=not (target_file and use
                 user_dur=(u_dur if u_dur > 0 else None),
             )
             _render_result(result)
+        except ImportError as e:
+            # частый случай: не хватает soxr (ресемплинг SwiftF0). Даём точную команду,
+            # а не голый traceback.
+            msg = str(e)
+            if 'soxr' in msg.lower():
+                st.error("Не хватает пакета **soxr** (нужен SwiftF0 для ресемплинга "
+                         "аудио не-16кГц).\n\nПоставь один раз:\n\n"
+                         "```\npip install \"swift-f0[audio]\" soxr\n```\n\n"
+                         "После этого перезапусти приложение — больше ставить не придётся.")
+            else:
+                st.error(f"Не хватает зависимости: {msg}\n\n"
+                         "Поставь всё разом: `pip install -r requirements.txt`")
         except Exception as e:
             st.error(f"Не смог обработать: {type(e).__name__}: {e}")
         finally:

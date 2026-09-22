@@ -1,8 +1,10 @@
 # Runtime — что нужно, чтобы конвейер работал.
 # Ставить: pip install -r requirements.txt
 numpy>=2.0
-swift-f0>=0.2.0      # pitch tracker (MIT, CPU-only). Тянет onnxruntime.
+swift-f0[audio]>=0.2.0  # pitch tracker (MIT, CPU-only). [audio] тянет soxr —
+#   БЕЗ него SwiftF0 падает на любом входе НЕ 16кГц (ресемплинг). Обязательно.
 soundfile>=0.12      # чтение wav/mp3 (нужен libsndfile в системе)
+soxr>=0.3            # ресемплинг для SwiftF0 (дублирую явно — не полагаться на extras)
 
 # --- dev/test ---
 pytest>=8.0          # запуск тестов (тесты работают и без pytest, напрямую)
