@@ -72,12 +72,12 @@ Phase 1 проверяет ТОЛЬКО алгоритм сравнения (`co
 
 | Файл | Роль |
 |------|------|
-| `config.py` | Все калибруемые пороги в одном dataclass. Крутить здесь, не по коду. |
-| `synth.py` | Генератор f0-контуров с известной ground truth. |
-| `compare.py` | Ядро: формула accuracy + confidence. Контракт входа/выхода. |
-| `test_phase1.py` | Тесты Cases 1–6 + пауза + missed-note + math-проверка. |
+| `phase1/config.py` | Все калибруемые пороги в одном dataclass. Крутить здесь, не по коду. |
+| `phase1/synth.py` | Генератор f0-контуров с известной ground truth. |
+| `phase1/compare.py` | Ядро: формула accuracy + confidence. Контракт входа/выхода. |
+| `phase1/test_phase1.py` | Тесты Cases 1–6 + пауза + missed-note + math-проверка. |
 
-Запуск: `python3 test_phase1.py` (или `pytest test_phase1.py -v`). Ожидается **10/10 passed**.
+Запуск: `.venv/bin/python phase1/test_phase1.py` (или `pytest phase1/test_phase1.py -v`). Ожидается **10/10 passed**.
 Зависимости: только `numpy` (проверено на 2.4.4).
 
 ---
@@ -330,7 +330,8 @@ numpy, scipy, Streamlit (UI), sounddevice (запись). Всё локальн�
 - Все калибруемые числа — в config.py, не по коду. Никаких магических констант в логике.
 - Никаких заглушек, которые выглядят рабочими. Не уверен → LOW CONFIDENCE / NotImplementedError.
 
-> Проверка при старте новой сессии: скопировать 4 файла рядом, `python3 test_phase1.py` → 10/10.
+> Проверка при старте новой сессии: скопировать папку `phase1`, затем выполнить
+> `.venv/bin/python phase1/test_phase1.py` → 10/10.
 
 ---
 
@@ -355,7 +356,7 @@ cd "/Users/viktordomovnikov/Documents/Виктор/IT/GitHub/vocal_app"
 Запусти тесты встроенным тестовым раннером:
 
 ```bash
-.venv/bin/python test_phase1.py
+.venv/bin/python phase1/test_phase1.py
 ```
 
 Ожидаемый результат:
@@ -368,7 +369,7 @@ cd "/Users/viktordomovnikov/Documents/Виктор/IT/GitHub/vocal_app"
 
 ```bash
 source .venv/bin/activate
-python test_phase1.py
+python phase1/test_phase1.py
 ```
 
 Для выхода из окружения:
