@@ -158,3 +158,25 @@ def load_wav_mono(path, start_s=None, dur_s=None):
     if y.ndim > 1:
         y = y.mean(axis=1)
     return y.astype(np.float32), sr
+
+
+def wav_path_to_f0(path, start_s=None, dur_s=None):
+    """wav/mp3 файл (+ опц. участок) -> (f0, conf) на сетке CFG.frame_ms."""
+    y, sr = load_wav_mono(path, start_s=start_s, dur_s=dur_s)
+    seg_dur = len(y) / sr
+    f0, conf, _ts = wav_to_f0_grid(y, sr, dur_s=seg_dur)
+    return f0, conf
+
+
+def score_wavs(target_path, user_path,
+               target_start=None, target_dur=None,
+               user_start=None, user_dur=None):
+    """Движок для UI: два wav-файла (эталон + дубль) + опциональные участки -> Result.
+
+    Участки задаются в секундах (start, dur) для каждого файла отдельно — эталон и
+    дубль могут стоять на разных таймкодах. DTW потом выравнивает их внутри участка.
+    UI вызывает эту функцию; сам UI логику не содержит.
+    """
+    f0_t, conf_t = wav_path_to_f0(target_path, target_start, target_dur)
+    f0_u, conf_u = wav_path_to_f0(user_path, user_start, user_dur)
+    return score_take(f0_t, f0_u, conf_user=conf_u, conf_target=conf_t, do_align=True)

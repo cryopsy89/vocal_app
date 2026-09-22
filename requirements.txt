@@ -7,6 +7,7 @@ soundfile>=0.12      # чтение wav/mp3 (нужен libsndfile в систе
 # --- dev/test ---
 pytest>=8.0          # запуск тестов (тесты работают и без pytest, напрямую)
 matplotlib>=3.7      # только для диагностических графиков (не для конвейера)
+streamlit>=1.30      # UI (Phase 4). streamlit run app.py
 
 # --- НЕ ставится через pip в этот проект ---
 # demucs — source separation. Запускается ОТДЕЛЬНО на машине пользователя
