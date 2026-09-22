@@ -14,6 +14,8 @@ import soundfile as sf
 from config import CFG
 import pitch
 import compare
+import notes as notes_mod
+import align as align_mod
 
 
 # ---------- ресэмплинг f0 на сетку CFG.frame_ms ----------
@@ -56,9 +58,20 @@ def resample_f0(f0_src, ts_src, dur_s, frame_ms=None, voiced_gap_ms=None):
 
 
 def resample_confidence(conf_src, ts_src, ts_dst):
-    """Confidence на целевую сетку — ближайшим соседом (не интерполируем,
-    это вероятность, а не частота)."""
-    idx = np.clip(np.searchsorted(ts_src, ts_dst), 0, len(ts_src) - 1)
+    """Confidence на целевую сетку — ИСТИННО ближайшим соседом (не интерполируем,
+    это вероятность, а не частота).
+
+    searchsorted даёт индекс ВСТАВКИ (правый сосед), из-за чего near-boundary фрейму
+    доставалась бы уверенность соседнего сегмента (напр. конца паузы вместо ноты) и
+    искажался бы LOW CONFIDENCE. Поэтому сравниваем расстояние до левого и правого
+    соседа и берём реально ближайший."""
+    if len(ts_src) == 1:
+        return np.full(len(ts_dst), conf_src[0])
+    right = np.clip(np.searchsorted(ts_src, ts_dst), 0, len(ts_src) - 1)
+    left = np.clip(right - 1, 0, len(ts_src) - 1)
+    d_right = np.abs(ts_src[right] - ts_dst)
+    d_left = np.abs(ts_src[left] - ts_dst)
+    idx = np.where(d_left <= d_right, left, right)
     return conf_src[idx]
 
 
@@ -93,6 +106,44 @@ def analyze_wavs(user_wav, sr_user, f0_target, note_bounds,
     note_bounds = [(s, min(e, n), nm) for (s, e, nm) in note_bounds if s < n]
     return compare.analyze(f0_user, f0_target, note_bounds,
                            conf_user=conf_user, conf_target=conf_target)
+
+
+def score_take(f0_target_raw, f0_user_raw, conf_user=None, conf_target=None,
+               do_align=True):
+    """ПОЛНЫЙ путь сравнения (Phase 3): сырой target-f0 + сырой user-f0 -> Result.
+
+    Шаги:
+      1. сегментация target -> ноты (для note-вердикта и UI-границ);
+      2. smoothed_target: сглаженный контур эталона внутри нот (для расчёта центов);
+      3. user проходит тот же prepare_contour (форма-с-формой);
+      4. DTW выравнивает user к target по времени;
+      5. compare.analyze без внутренней вибрато-маски (вибрато уже погашено сглаживанием).
+
+    Транспоз НЕ делается (кейс Виктора — один голос). Если нужен — до этого вызова.
+    """
+    n = len(f0_target_raw)
+    seg = notes_mod.segment(f0_target_raw)
+    tgt, bounds = notes_mod.smoothed_target(f0_target_raw, seg, n)
+
+    user = notes_mod.prepare_contour(f0_user_raw)
+    # выровнять длины
+    m = min(len(user), n)
+    user, tgt = user[:m], tgt[:m]
+    bounds = [(s, min(e, m), nm) for (s, e, nm) in bounds if s < m]
+
+    c_align = 1.0
+    if do_align:
+        user, ncost = align_mod.warp_user_to_target(tgt, user)
+        c_align = align_mod.align_confidence(ncost)
+
+    no_vib = np.zeros(m, dtype=bool)   # target уже сглажен — отдельная маска не нужна
+    if conf_user is not None:
+        conf_user = conf_user[:m]
+    if conf_target is not None:
+        conf_target = conf_target[:m]
+    return compare.analyze(user, tgt, bounds, conf_user=conf_user,
+                           conf_target=conf_target, c_align=c_align,
+                           vibrato_mask_ext=no_vib)
 
 
 def load_wav_mono(path, start_s=None, dur_s=None):

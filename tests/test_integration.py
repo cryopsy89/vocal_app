@@ -6,8 +6,10 @@ Integration test: цельный конвейер wav -> track -> resample -> co
 путь, включая ресэмплинг сетки и стыковку с compare.analyze. Заложили смещение
 X центов через wav -> ожидаем, что итоговый Result покажет то же X.
 
-Запуск: python3 test_integration.py
+Запуск: python3 tests/test_integration.py
 """
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 import numpy as np
 import synth
 import pitch

@@ -6,8 +6,10 @@ Phase 2: проверка САМОГО pitch tracker (SwiftF0) на синтет
 можно ли вообще доверять связке "wav -> f0"? Если трекер сам врёт на чистом
 сигнале больше нашего порога интонации, вся оценка бессмысленна.
 
-Запуск: python3 test_phase2.py
+Запуск: python3 tests/test_phase2.py
 """
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 import numpy as np
 import synth
 import pitch
