@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 import numpy as np
 import synth
 from compare import analyze, error_cents
-from config import CFG
 
 
 def _bounds(*segs):

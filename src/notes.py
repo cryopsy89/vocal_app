@@ -46,20 +46,47 @@ def median_smooth(x, win_frames):
 
 
 def reject_outliers(f0, frame_ms=None):
-    """Выкидывает f0-точки, отскочившие от локальной медианы больше порога
-    (октавные срывы трекера на согласных/шипящих). Возвращает копию с NaN на выбросах.
+    """Выкидывает f0-иглы — артефакты трекинга/separation (октавные срывы на
+    согласных/шипящих, свист Demucs). Возвращает копию с NaN на выбросах.
 
-    Это НЕ сглаживание: убираем именно грубые одиночные скачки (~пол-октавы+),
-    которые медианный фильтр окном 200мс не давит, если их несколько подряд.
-    Вибрато (±<1 полутона) этот шаг не трогает."""
+    Критерий выведен из данных (студия+live «90 белых дней»), чтобы отличить
+    АРТЕФАКТ от РЕАЛЬНОЙ фальши пользователя:
+      - артефакт = скачок >= outlier_semitones (6 полутонов) от РОБАСТНОГО фона
+        И короткий пробег (<= outlier_max_run_ms). Пример: игла D6 (27 полутонов,
+        80мс) посреди C4-фразы.
+      - реальная фальшь = 2-5 полутонов, УСТОЙЧИВО (вся нота). Ниже порога 6 ->
+        НЕ трогается. Это принципиально: раньше порог 3 полутона резал фальшь.
+
+    Робастный фон — широкое окно (outlier_bg_ms), чтобы медиана НЕ подтягивалась
+    к самой игле (узкое окно её пропускало). Вибрато (<1 полутона) не затрагивается."""
     if frame_ms is None:
         frame_ms = CFG.frame_ms
     semis = hz_to_semitones(f0)
-    win = max(3, int(round(CFG.outlier_win_ms / frame_ms)))
-    local_med = median_smooth(semis, win)
-    dev = np.abs(semis - local_med)                      # полутона
     out = f0.copy()
-    out[dev > CFG.outlier_semitones] = np.nan            # выброс -> unvoiced
+
+    max_run = max(1, int(round(CFG.outlier_max_run_ms / frame_ms)))
+
+    # Детектор: отскок от ГЛОБАЛЬНОЙ медианы песни (не скользящей — скользящая
+    # подтягивается к самой игле и её последние фреймы «выживают»). Фон = медиана
+    # всего voiced-контура; артефакт-игла далеко от общего регистра И короткая.
+    voiced = ~np.isnan(semis)
+    global_med = np.median(semis[voiced]) if voiced.any() else 0.0
+    dev_global = np.abs(semis - global_med)
+
+    # кандидат: далеко от глобального регистра (>outlier_from_median полутонов)
+    cand = dev_global > CFG.outlier_from_median
+    n = len(cand)
+    i = 0
+    while i < n:
+        if cand[i] and not np.isnan(semis[i]):
+            j = i
+            while j < n and cand[j] and not np.isnan(semis[j]):
+                j += 1
+            if (j - i) <= max_run:                       # короткий пробег вне регистра = игла
+                out[i:j] = np.nan
+            i = j
+        else:
+            i += 1
     return out
 
 

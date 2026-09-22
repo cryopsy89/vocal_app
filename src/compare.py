@@ -202,7 +202,13 @@ def analyze(f0_user, f0_target, note_bounds,
     """vibrato_mask_ext: готовая per-frame маска вибрато, посчитанная по ИСХОДНОМУ
     контуру (notes.vibrato_frame_mask). Если дана — используется вместо внутренней
     оценки по стабилизированному target (которая не видит вибрато на плоских нотах)."""
+    f0_user = np.asarray(f0_user, dtype=float)
+    f0_target = np.asarray(f0_target, dtype=float)
     n = len(f0_target)
+    if len(f0_user) != n:
+        raise ValueError(
+            f"f0_user ({len(f0_user)}) и f0_target ({n}) разной длины — "
+            "выровняй их до вызова analyze (это делает pipeline.score_take)")
     if conf_user is None:
         conf_user = np.ones(n)
     if conf_target is None:
@@ -234,7 +240,18 @@ def analyze(f0_user, f0_target, note_bounds,
     n_high = sum(1 for x in notes if x.direction == 'high')
 
     conf = confidence(cov, conf_user, conf_target, score_m, c_align, c_transpose)
-    low = (conf < CFG.gate) or (not np.isnan(cov) and cov < CFG.coverage_min_for_score)
+    # LOW CONFIDENCE если: gate не пройден; покрытие мизерное; ИЛИ оценивать нечего
+    # (нет нот / почти нет фреймов в счёте). Последнее закрывает ложные "100%" на
+    # пустом или почти пустом входе — цифра без опоры хуже отсутствия цифры.
+    scored_frames = int(score_m.sum())
+    min_frames = max(1, int(round(CFG.min_scored_ms / CFG.frame_ms)))
+    low = (
+        (conf < CFG.gate)
+        or (not np.isnan(cov) and cov < CFG.coverage_min_for_score)
+        or len(note_bounds) == 0
+        or scored_frames < min_frames
+        or np.isnan(p50)
+    )
 
     # worst: топ-N по |median|*sqrt(dur), только некорректные и покрытые
     ranked = sorted(

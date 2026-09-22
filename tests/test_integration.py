@@ -40,6 +40,24 @@ def test_resample_no_leak_through_silence():
     assert voiced_in_pause <= 2, f'{voiced_in_pause} фреймов протекли через паузу'
 
 
+def test_resample_confidence_uses_nearest_neighbor():
+    conf_src = np.array([0.2, 0.9])
+    ts_src = np.array([0.0, 0.1])
+    ts_dst = np.array([0.04, 0.06])
+
+    conf_dst = pipeline.resample_confidence(conf_src, ts_src, ts_dst)
+
+    np.testing.assert_array_equal(conf_dst, np.array([0.2, 0.9]))
+
+
+def test_resample_confidence_handles_single_source_frame():
+    conf_dst = pipeline.resample_confidence(
+        np.array([0.7]), np.array([0.0]), np.array([0.0, 0.1, 0.2])
+    )
+
+    np.testing.assert_array_equal(conf_dst, np.array([0.7, 0.7, 0.7]))
+
+
 # ---------- end-to-end: идеальное пение -> ~0 центов ----------
 
 def test_e2e_perfect():

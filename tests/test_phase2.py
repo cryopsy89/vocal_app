@@ -110,7 +110,7 @@ if __name__ == '__main__':
         try:
             print(f'{fn.__name__}:')
             fn()
-            print(f'  ok')
+            print('  ok')
         except AssertionError as e:
             failed += 1
             print(f'  FAIL: {e}')

@@ -45,7 +45,6 @@ def dtw_path(target_st, user_st, band_frames=None, unvoiced_pen=None):
     длины — иначе на длинном фрагменте DTW уходит на секунды и маскирует
     систематический pitch-сдвиг, пересопоставляя чужие ноты по высоте.
     """
-    from config import CFG
     if band_frames is None:
         band_frames = max(1, int(round(CFG.dtw_band_ms / CFG.frame_ms)))
     if unvoiced_pen is None:
@@ -97,6 +96,13 @@ def warp_user_to_target(f0_target, f0_user, band_frames=None):
 
     Для каждого target-фрейма берём f0_user из сопоставленного пути.
     Если одному target соответствует несколько user-фреймов — берём медиану (voiced)."""
+    f0_target = np.asarray(f0_target, dtype=float)
+    f0_user = np.asarray(f0_user, dtype=float)
+    # краевые случаи: нечего выравнивать -> NaN-контур длины target, стоимость inf
+    if len(f0_target) == 0 or len(f0_user) == 0 \
+       or not np.any(~np.isnan(f0_target)) or not np.any(~np.isnan(f0_user)):
+        return np.full(len(f0_target), np.nan), float('inf')
+
     t_st = _to_semitones(f0_target)
     u_st = _to_semitones(f0_user)
     # де-меанирование ТОЛЬКО для поиска пути (не для scoring)

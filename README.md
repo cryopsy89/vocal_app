@@ -10,9 +10,13 @@
 выравнивание по времени (DTW), расчёт точности. UI (Phase 4) и training-режим
 (Phase 5) — не сделаны.
 
-Тесты: **24 теста**, проходят через `pytest` и прямым запуском (см. ниже).
+Тесты: **37 тестов**, проходят через `pytest` и прямым запуском (см. ниже).
 Phase 3 требует фикстуру `tests/data/studio_f0.npz`; без неё эти 4 теста
 пропускаются (skip), не падают.
+
+Проверено на реальном материале: студийный вокал (эталон) vs живой дубль под
+минус — конвейер отрабатывает, честно ловит промахи и не выдаёт цифру там, где
+оценивать нечего (пустой вход / мизерное покрытие → LOW CONFIDENCE).
 
 ## Установка
 
@@ -26,12 +30,14 @@ pip install -r requirements.txt
 ## Проверка
 
 ```bash
-python3 -m pytest tests/          # все тесты разом
+python3 -m pytest                 # все 37 тестов разом (подхватывает pytest.ini)
 # или напрямую, без pytest:
 python3 tests/test_phase1.py      # 10/10  формула scoring
 python3 tests/test_phase2.py      #  5/5   pitch tracker (нужен swift-f0)
 python3 tests/test_integration.py #  5/5   конвейер wav->score
 python3 tests/test_phase3.py      #  4/4   полный путь (нужна фикстура npz)
+python3 tests/test_outliers.py    #  4/4   отброс артефактов vs реальная фальшь
+python3 tests/test_edge_cases.py  #  9/9   краевые случаи, нет ложных 100%
 ```
 
 ## Структура
