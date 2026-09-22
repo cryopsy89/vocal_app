@@ -197,7 +197,11 @@ class Result:
 
 def analyze(f0_user, f0_target, note_bounds,
             conf_user=None, conf_target=None,
-            c_align: float = 1.0, c_transpose: float = 1.0) -> Result:
+            c_align: float = 1.0, c_transpose: float = 1.0,
+            vibrato_mask_ext=None) -> Result:
+    """vibrato_mask_ext: готовая per-frame маска вибрато, посчитанная по ИСХОДНОМУ
+    контуру (notes.vibrato_frame_mask). Если дана — используется вместо внутренней
+    оценки по стабилизированному target (которая не видит вибрато на плоских нотах)."""
     n = len(f0_target)
     if conf_user is None:
         conf_user = np.ones(n)
@@ -206,7 +210,10 @@ def analyze(f0_user, f0_target, note_bounds,
 
     err = error_cents(f0_user, f0_target)
     trans_m = transition_mask(note_bounds, n)
-    vib_m = vibrato_mask(f0_target, note_bounds)
+    if vibrato_mask_ext is not None:
+        vib_m = vibrato_mask_ext[:n]
+    else:
+        vib_m = vibrato_mask(f0_target, note_bounds)
     score_m = score_mask(f0_user, f0_target, trans_m, vib_m)
     oct_m = octave_flags(err) & score_m
 
