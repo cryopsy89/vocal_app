@@ -16,6 +16,7 @@ import pitch
 import compare
 import notes as notes_mod
 import align as align_mod
+import transpose as transpose_mod
 
 
 # ---------- ресэмплинг f0 на сетку CFG.frame_ms ----------
@@ -109,18 +110,26 @@ def analyze_wavs(user_wav, sr_user, f0_target, note_bounds,
 
 
 def score_take(f0_target_raw, f0_user_raw, conf_user=None, conf_target=None,
-               do_align=True):
-    """ПОЛНЫЙ путь сравнения (Phase 3): сырой target-f0 + сырой user-f0 -> Result.
+               do_align=True, key=0):
+    """ПОЛНЫЙ путь сравнения: сырой target-f0 + сырой user-f0 -> Result.
 
     Шаги:
+      0. ТРАНСПОЗ: снять общий высотный сдвиг (тональность/октава) дубля — ДО align.
       1. сегментация target -> ноты (для note-вердикта и UI-границ);
       2. smoothed_target: сглаженный контур эталона внутри нот (для расчёта центов);
       3. user проходит тот же prepare_contour (форма-с-формой);
       4. DTW выравнивает user к target по времени;
       5. compare.analyze без внутренней вибрато-маски (вибрато уже погашено сглаживанием).
 
-    Транспоз НЕ делается (кейс Виктора — один голос). Если нужен — до этого вызова.
+    key: 0 по умолчанию (транспоз НЕ применяется — самый честный вариант, не гадаем).
+      int полутонов — ручной сдвиг (кавер в другой тональности/октаве).
+      'auto' — автоопределение (ненадёжно на реальном вокале, поэтому НЕ дефолт;
+      включается пользователем явно). Найденный сдвиг -> Result.transpose_shift/conf.
     """
+    # --- шаг 0: транспоз ДО всего остального ---
+    f0_user_raw, shift, tr_conf = transpose_mod.transpose_user(
+        f0_target_raw, f0_user_raw, key=key)
+
     n = len(f0_target_raw)
     seg = notes_mod.segment(f0_target_raw)
     tgt, bounds = notes_mod.smoothed_target(f0_target_raw, seg, n)
@@ -141,9 +150,12 @@ def score_take(f0_target_raw, f0_user_raw, conf_user=None, conf_target=None,
         conf_user = conf_user[:m]
     if conf_target is not None:
         conf_target = conf_target[:m]
-    return compare.analyze(user, tgt, bounds, conf_user=conf_user,
-                           conf_target=conf_target, c_align=c_align,
-                           vibrato_mask_ext=no_vib)
+    result = compare.analyze(user, tgt, bounds, conf_user=conf_user,
+                             conf_target=conf_target, c_align=c_align,
+                             vibrato_mask_ext=no_vib)
+    result.transpose_shift = shift
+    result.transpose_conf = tr_conf
+    return result
 
 
 def load_wav_mono(path, start_s=None, dur_s=None):
@@ -170,13 +182,15 @@ def wav_path_to_f0(path, start_s=None, dur_s=None):
 
 def score_wavs(target_path, user_path,
                target_start=None, target_dur=None,
-               user_start=None, user_dur=None):
+               user_start=None, user_dur=None, key=0):
     """Движок для UI: два wav-файла (эталон + дубль) + опциональные участки -> Result.
 
     Участки задаются в секундах (start, dur) для каждого файла отдельно — эталон и
     дубль могут стоять на разных таймкодах. DTW потом выравнивает их внутри участка.
+    key: 'auto' или int полутонов (ручной ключ, приоритет над auto).
     UI вызывает эту функцию; сам UI логику не содержит.
     """
     f0_t, conf_t = wav_path_to_f0(target_path, target_start, target_dur)
     f0_u, conf_u = wav_path_to_f0(user_path, user_start, user_dur)
-    return score_take(f0_t, f0_u, conf_user=conf_u, conf_target=conf_t, do_align=True)
+    return score_take(f0_t, f0_u, conf_user=conf_u, conf_target=conf_t,
+                      do_align=True, key=key)

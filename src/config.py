@@ -46,6 +46,11 @@ class Config:
     # --- октава ---
     octave_tol_cents: float = 50.0  # |error| в пределах 1200±этого → флаг OCTAVE
 
+    # --- транспоз (определение тональности/октавы дубля) ---
+    transpose_max: int = 24         # макс. сдвиг ключа (полутоны), ±2 октавы
+    transpose_search_semitones: int = 7  # радиус перебора вокруг грубой оценки
+    transpose_min_conf: float = 0.05  # ниже — авто не уверено, просим ручной ключ
+
     # --- confidence gate ---
     gate: float = 0.5               # ниже — показываем LOW CONFIDENCE, число скрыто
     coverage_min_for_score: float = 0.30  # если спето меньше — оценивать нечего

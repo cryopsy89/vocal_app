@@ -193,6 +193,14 @@ class Result:
     error_per_frame: np.ndarray = None
     score_mask_per_frame: np.ndarray = None
     octave_mask_per_frame: np.ndarray = None
+    # контуры, которые реально сравнивались (после сглаживания и DTW) — для
+    # верхнего графика наложения студия/ты. Именно ЭТИ, а не сырые, иначе кривые
+    # не совпадут по времени с deviation.
+    target_f0_per_frame: np.ndarray = None
+    user_f0_per_frame: np.ndarray = None
+    # транспоз (заполняется pipeline.score_take): применённый сдвиг ключа и уверенность
+    transpose_shift: int = 0
+    transpose_conf: float = 1.0
 
 
 def analyze(f0_user, f0_target, note_bounds,
@@ -269,4 +277,5 @@ def analyze(f0_user, f0_target, note_bounds,
         worst=worst,
         error_per_frame=err, score_mask_per_frame=score_m,
         octave_mask_per_frame=oct_m,
+        target_f0_per_frame=f0_target, user_f0_per_frame=f0_user,
     )
